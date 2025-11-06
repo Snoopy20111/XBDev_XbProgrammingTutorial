@@ -1,53 +1,59 @@
 //Main header file for the XDK
 #include <xtl.h>
+#include <D3DX8.h>
 
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_DIFFUSE)
 
 LPDIRECT3D8 g_pD3D = NULL;                      // DirectX Object
 LPDIRECT3DDEVICE8 g_pD3DDevice = NULL;          // Screen Object
 LPDIRECT3DVERTEXBUFFER8 g_pVertexBuffer = NULL; // Vertices Buffer
+LPDIRECT3DTEXTURE8 pTexture = NULL;             // Texture data
 
 struct CUSTOMVERTEX
 {
     FLOAT x, y, z, rhw; // The transformed position for the vertex.
     DWORD colour;       // The vertex colour.
+    FLOAT tu, tv;       // UV coordinates
 };
 
-static void DrawTriangle()
+static void DrawTexturedTriangle()
 {
     VOID* pVertices = NULL;
 
-    // Store each point of the triangle together with it's colour
+    //Store each point of the triangle together with it's colour and UV coords
     CUSTOMVERTEX cvVertices[] =
     {
-        {250.0f, 100.0f, 0.5f, 1.0f, D3DCOLOR_XRGB(255, 0, 0),}, // Vertex 1 - Red (250, 100)
-        {400.0f, 350.0f, 0.5f, 1.0f, D3DCOLOR_XRGB(0, 255, 0),}, // Vertex 2 - Green (400, 350)
-        {100.0f, 350.0f, 0.5f, 1.0f, D3DCOLOR_XRGB(0, 0, 255),}, // Vertex 3 - Blue (100, 350)
+        { -1.0f, -1.0f, 0.0f, 0x00FF0000, 0.0f, 1.0f }, // x, y, z, color, u, v
+        { -1.0f,  1.0f, 0.0f, 0x0000FF00, 0.0f, 0.0f },
+        {  1.0f,  1.0f, 0.0f, 0x000000FF, 1.0f, 0.0f }
     };
 
-    // Create the vertex buffer from our device
-    g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),
+    //Filepath is "D:\\Media\\myTexture.bmp"
+    D3DXCreateTextureFromFile(g_pD3DDevice, "D:\\Media\\myTexture.bmp", &pTexture);
+
+    //Create the vertex buffer from our device
+    g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),  //Length = 3, because it's a triangle
         0,
         D3DFVF_CUSTOMVERTEX,
         D3DPOOL_DEFAULT,
         &g_pVertexBuffer);
 
-    // Get a pointer to the vertex buffer vertices and lock the vertex buffer
-    g_pVertexBuffer->Lock(0, sizeof(cvVertices), (BYTE**)&pVertices, 0);
+    // Copy to vertex buffer
+    g_pVertexBuffer->Lock(0, sizeof(cvVertices), (BYTE**)&pVertices, 0);    //Get a pointer to the vertex buffer vertices and lock the vertex buffer
+    memcpy(pVertices, cvVertices, sizeof(cvVertices));                      //Copy our stored vertices values into the vertex buffer
+    g_pVertexBuffer->Unlock();                                              //Unlock the vertex buffer
 
-    // Copy our stored vertices values into the vertex buffer
-    memcpy(pVertices, cvVertices, sizeof(cvVertices));
-
-    // Unlock the vertex buffer
-    g_pVertexBuffer->Unlock();
-
-    // Rendering our triangle
+    //Rendering our triangle
     g_pD3DDevice->SetStreamSource(0, g_pVertexBuffer, sizeof(CUSTOMVERTEX));
     g_pD3DDevice->SetVertexShader(D3DFVF_CUSTOMVERTEX);
+
+    //Set our background to use our texture buffer
+    g_pD3DDevice->SetTexture(0, pTexture);
     g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
 
-    // Every time we create a vertex buffer, we must release one!.
+    //Must release textures in the same way as Verticies
     g_pVertexBuffer->Release();
+    pTexture->Release();
 }
 
 static void InitialiseD3D()
@@ -76,6 +82,13 @@ static void InitialiseD3D()
     g_pD3D->CreateDevice(0, D3DDEVTYPE_HAL, NULL, 
         D3DCREATE_HARDWARE_VERTEXPROCESSING,
         &d3dpp, &g_pD3DDevice);
+
+    // Textures!
+    g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+    g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+
+    // Turn off lighting becuase we are specifying that our vertices have textures colour
+    g_pD3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
 }
 
 static void CleanUpD3D()
@@ -98,7 +111,7 @@ void __cdecl main()
         g_pD3DDevice->BeginScene();
 
         // Draw stuff here
-        DrawTriangle();
+        DrawTexturedTriangle();
 
         // End the scene
         g_pD3DDevice->EndScene();
