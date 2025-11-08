@@ -1,60 +1,11 @@
 //Main header file for the XDK
 #include <xtl.h>
-#include <D3DX8.h>
-
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_DIFFUSE)
+#include <D3DX8.h> //used for DirectX rendering
+#include <xfont.h> //used for directX textout
+#include <stdio.h> //used for swprintf
 
 LPDIRECT3D8 g_pD3D = NULL;                      // DirectX Object
 LPDIRECT3DDEVICE8 g_pD3DDevice = NULL;          // Screen Object
-LPDIRECT3DVERTEXBUFFER8 g_pVertexBuffer = NULL; // Vertices Buffer
-LPDIRECT3DTEXTURE8 pTexture = NULL;             // Texture data
-
-struct CUSTOMVERTEX
-{
-    FLOAT x, y, z, rhw; // The transformed position for the vertex.
-    DWORD colour;       // The vertex colour.
-    FLOAT tu, tv;       // UV coordinates
-};
-
-static void DrawTexturedTriangle()
-{
-    VOID* pVertices = NULL;
-
-    //Store each point of the triangle together with it's colour and UV coords
-    CUSTOMVERTEX cvVertices[] =
-    {
-        { -1.0f, -1.0f, 0.0f, 0x00FF0000, 0.0f, 1.0f }, // x, y, z, color, u, v
-        { -1.0f,  1.0f, 0.0f, 0x0000FF00, 0.0f, 0.0f },
-        {  1.0f,  1.0f, 0.0f, 0x000000FF, 1.0f, 0.0f }
-    };
-
-    //Filepath is "D:\\Media\\myTexture.bmp"
-    D3DXCreateTextureFromFile(g_pD3DDevice, "D:\\Media\\myTexture.bmp", &pTexture);
-
-    //Create the vertex buffer from our device
-    g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),  //Length = 3, because it's a triangle
-        0,
-        D3DFVF_CUSTOMVERTEX,
-        D3DPOOL_DEFAULT,
-        &g_pVertexBuffer);
-
-    // Copy to vertex buffer
-    g_pVertexBuffer->Lock(0, sizeof(cvVertices), (BYTE**)&pVertices, 0);    //Get a pointer to the vertex buffer vertices and lock the vertex buffer
-    memcpy(pVertices, cvVertices, sizeof(cvVertices));                      //Copy our stored vertices values into the vertex buffer
-    g_pVertexBuffer->Unlock();                                              //Unlock the vertex buffer
-
-    //Rendering our triangle
-    g_pD3DDevice->SetStreamSource(0, g_pVertexBuffer, sizeof(CUSTOMVERTEX));
-    g_pD3DDevice->SetVertexShader(D3DFVF_CUSTOMVERTEX);
-
-    //Set our background to use our texture buffer
-    g_pD3DDevice->SetTexture(0, pTexture);
-    g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
-
-    //Must release textures in the same way as Verticies
-    g_pVertexBuffer->Release();
-    pTexture->Release();
-}
 
 static void InitialiseD3D()
 {
@@ -83,10 +34,6 @@ static void InitialiseD3D()
         D3DCREATE_HARDWARE_VERTEXPROCESSING,
         &d3dpp, &g_pD3DDevice);
 
-    // Textures!
-    g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-    g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-
     // Turn off lighting becuase we are specifying that our vertices have textures colour
     g_pD3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
 }
@@ -95,6 +42,49 @@ static void CleanUpD3D()
 {
     g_pD3DDevice->Release();
     g_pD3D->Release();
+}
+
+static void DisplayText()
+{
+    // This function is tremendously wasteful (creates and destroys the font buffer every frame and continuously reloads the font),
+    // but it's simple to understand. In time this can be made into a class, or the XFONT* buffer could be put in the directX init code.
+
+    //Create some DirectX text buffers
+    XFONT* m_pArial18BitmapFont;    // Pointer to the Arial18Normal Bitmap font
+    LPDIRECT3DSURFACE8 g_pFrontBuffer;
+
+    //Initialise Fonts
+    g_pD3DDevice->GetBackBuffer(-1, D3DBACKBUFFER_TYPE_MONO, &g_pFrontBuffer);
+    constexpr DWORD dwFontCacheSize = 16 * 1024;
+
+    //Load our font in - have to specify its location
+    XFONT_OpenBitmapFont(
+        L"D:\\Arial18Normal.bmf",
+        dwFontCacheSize,
+        &m_pArial18BitmapFont
+    );
+
+    WCHAR szbuff[200] = { 0 };
+    swprintf(szbuff, L"Hello World");
+
+    //Top left corner of where we want to draw our text
+    constexpr float xpos = 100.0f;
+    constexpr float ypos = 100.0f;
+
+    //Display our text
+    m_pArial18BitmapFont->SetTextColor(D3DCOLOR_XRGB(30, 225, 20));
+
+    m_pArial18BitmapFont->TextOut(
+        g_pFrontBuffer,
+        szbuff,
+        -1,
+        (long)xpos,
+        (long)ypos
+    );
+
+    //Release our Text Buffers
+    m_pArial18BitmapFont->Release();
+    g_pFrontBuffer->Release();
 }
 
 // Application entry point
@@ -110,8 +100,8 @@ void __cdecl main()
         // Begin the scene
         g_pD3DDevice->BeginScene();
 
-        // Draw stuff here
-        DrawTexturedTriangle();
+        // Draw the text
+        DisplayText();
 
         // End the scene
         g_pD3DDevice->EndScene();
