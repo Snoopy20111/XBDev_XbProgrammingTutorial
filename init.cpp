@@ -22,17 +22,15 @@ static void DrawTexturedTriangle()
 
     //Store each point of the triangle together with it's colour and UV coords
     CUSTOMVERTEX cvVertices[] =
-    {
-        { -1.0f, -1.0f, 0.0f, 0x00FF0000, 0.0f, 1.0f }, // x, y, z, color, u, v
-        { -1.0f,  1.0f, 0.0f, 0x0000FF00, 0.0f, 0.0f },
-        {  1.0f,  1.0f, 0.0f, 0x000000FF, 1.0f, 0.0f }
+    {//      x     y     z       color     u     v
+        { -1.0f, -1.0f, 0.0f, 0x00FF0000, 0.0f, 1.0f }, //Red
+        { -1.0f,  1.0f, 0.0f, 0x0000FF00, 0.0f, 0.0f },	//Green
+        {  1.0f,  1.0f, 0.0f, 0x000000FF, 1.0f, 0.0f } //Blue
     };
 
     //Filepath is "D:\\myTexture.bmp"
     //Applications seem to assume the current drive is always the D: drive, aka the disk? Maybe??
     D3DXCreateTextureFromFile(g_pD3DDevice, "D:\\myTexture.bmp", &pTexture);
-
-
 
     //Create the vertex buffer from our device
     g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),  //Length = 3, because it's a triangle
