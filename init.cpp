@@ -1,5 +1,6 @@
 //Main header file for the XDK
 #include <xtl.h>
+//#include <D3DX8.h>
 
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_DIFFUSE)
 
@@ -26,20 +27,16 @@ static void DrawTriangle()
     };
 
     // Create the vertex buffer from our device
-    g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),
+    g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),  //Length = 3, because it's a triangle
         0,
         D3DFVF_CUSTOMVERTEX,
         D3DPOOL_DEFAULT,
         &g_pVertexBuffer);
 
-    // Get a pointer to the vertex buffer vertices and lock the vertex buffer
-    g_pVertexBuffer->Lock(0, sizeof(cvVertices), (BYTE**)&pVertices, 0);
-
-    // Copy our stored vertices values into the vertex buffer
-    memcpy(pVertices, cvVertices, sizeof(cvVertices));
-
-    // Unlock the vertex buffer
-    g_pVertexBuffer->Unlock();
+    // Copy to vertex buffer
+    g_pVertexBuffer->Lock(0, sizeof(cvVertices), (BYTE**)&pVertices, 0);    //Get a pointer to the vertex buffer vertices and lock the vertex buffer
+    memcpy(pVertices, cvVertices, sizeof(cvVertices));                      //Copy our stored vertices values into the vertex buffer
+    g_pVertexBuffer->Unlock();                                              //Unlock the vertex buffer
 
     // Rendering our triangle
     g_pD3DDevice->SetStreamSource(0, g_pVertexBuffer, sizeof(CUSTOMVERTEX));
