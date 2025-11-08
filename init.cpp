@@ -20,19 +20,18 @@ static void DrawTexturedTriangle()
 {
     VOID* pVertices = NULL;
 
-    //Store each point of the triangle together with it's colour and UV coords
+    // Store each point of the triangle together with it's colour and UV coords
     CUSTOMVERTEX cvVertices[] =
-    {//      x     y     z       color     u     v
-        { -1.0f, -1.0f, 0.0f, 0x00FF0000, 0.0f, 1.0f }, //Red
-        { -1.0f,  1.0f, 0.0f, 0x0000FF00, 0.0f, 0.0f },	//Green
-        {  1.0f,  1.0f, 0.0f, 0x000000FF, 1.0f, 0.0f } //Blue
+    {//      x       y     z     rhw     color     u     v
+        { 250.0f, 100.0f, 0.5f, 1.0f, 0x00FF0000, 250.0f, 100.0f }, // Red
+        { 400.0f, 350.0f, 0.5f, 1.0f, 0x0000FF00, 400.0f, 350.0f },	// Green
+        { 100.0f, 350.0f, 0.5f, 1.0f, 0x000000FF, 100.0f, 350.0f } // Blue
     };
 
-    //Filepath is "D:\\myTexture.bmp"
-    //Applications seem to assume the current drive is always the D: drive, aka the disk? Maybe??
+    // Filepath is "D:\\myTexture.bmp"
     D3DXCreateTextureFromFile(g_pD3DDevice, "D:\\myTexture.bmp", &pTexture);
 
-    //Create the vertex buffer from our device
+    // Create the vertex buffer from our device
     g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),  //Length = 3, because it's a triangle
         0,
         D3DFVF_CUSTOMVERTEX,
@@ -40,19 +39,19 @@ static void DrawTexturedTriangle()
         &g_pVertexBuffer);
 
     // Copy to vertex buffer
-    g_pVertexBuffer->Lock(0, sizeof(cvVertices), (BYTE**)&pVertices, 0);    //Get a pointer to the vertex buffer vertices and lock the vertex buffer
-    memcpy(pVertices, cvVertices, sizeof(cvVertices));                      //Copy our stored vertices values into the vertex buffer
-    g_pVertexBuffer->Unlock();                                              //Unlock the vertex buffer
+    g_pVertexBuffer->Lock(0, sizeof(cvVertices), (BYTE**)&pVertices, 0);    // Get a pointer to the vertex buffer vertices and lock the vertex buffer
+    memcpy(pVertices, cvVertices, sizeof(cvVertices));                      // Copy our stored vertices values into the vertex buffer
+    g_pVertexBuffer->Unlock();                                              // Unlock the vertex buffer
 
-    //Rendering our triangle
+    // Rendering our triangle
     g_pD3DDevice->SetStreamSource(0, g_pVertexBuffer, sizeof(CUSTOMVERTEX));
     g_pD3DDevice->SetVertexShader(D3DFVF_CUSTOMVERTEX);
 
-    //Set our background to use our texture buffer
+    // Set our background to use our texture buffer
     g_pD3DDevice->SetTexture(0, pTexture);
     g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 1);
 
-    //Must release textures in the same way as Verticies
+    // Must release textures in the same way as Verticies
     g_pVertexBuffer->Release();
     pTexture->Release();
 }
@@ -75,6 +74,8 @@ static void InitialiseD3D()
 
     // Create one backbuffer
     d3dpp.BackBufferCount = 1;
+    d3dpp.EnableAutoDepthStencil = TRUE;
+    d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
 
     // Set up how the backbuffer is "presented" to the frontbuffer each time
     d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
