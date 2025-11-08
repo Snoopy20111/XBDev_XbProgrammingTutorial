@@ -14,7 +14,7 @@
     <ClCompile Include="init.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="Media\Copy Assets Here.txt" />
+    <Image Include="Media\myTexture.bmp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

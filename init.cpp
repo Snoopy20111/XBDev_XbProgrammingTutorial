@@ -29,7 +29,10 @@ static void DrawTexturedTriangle()
     };
 
     //Filepath is "D:\\myTexture.bmp"
+    //Applications seem to assume the current drive is always the D: drive, aka the disk? Maybe??
     D3DXCreateTextureFromFile(g_pD3DDevice, "D:\\myTexture.bmp", &pTexture);
+
+
 
     //Create the vertex buffer from our device
     g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),  //Length = 3, because it's a triangle

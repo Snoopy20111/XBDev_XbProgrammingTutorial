@@ -23,8 +23,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="Media\Copy Assets Here.txt">
+    <Image Include="Media\myTexture.bmp">
       <Filter>Media</Filter>
-    </Text>
+    </Image>
   </ItemGroup>
 </Project>
