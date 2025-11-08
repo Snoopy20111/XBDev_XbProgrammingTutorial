@@ -28,8 +28,8 @@ static void DrawTexturedTriangle()
         {  1.0f,  1.0f, 0.0f, 0x000000FF, 1.0f, 0.0f }
     };
 
-    //Filepath is "D:\\Media\\myTexture.bmp"
-    D3DXCreateTextureFromFile(g_pD3DDevice, "D:\\Media\\myTexture.bmp", &pTexture);
+    //Filepath is "D:\\myTexture.bmp"
+    D3DXCreateTextureFromFile(g_pD3DDevice, "D:\\myTexture.bmp", &pTexture);
 
     //Create the vertex buffer from our device
     g_pD3DDevice->CreateVertexBuffer(3 * sizeof(CUSTOMVERTEX),  //Length = 3, because it's a triangle
