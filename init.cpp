@@ -1,8 +1,6 @@
 //Main header file for the XDK
 #include <xtl.h>
 #include <D3DX8.h> //used for DirectX rendering
-#include <xfont.h> //used for directX textout
-#include <stdio.h> //used for swprintf
 
 LPDIRECT3D8 g_pD3D = NULL;                      // DirectX Object
 LPDIRECT3DDEVICE8 g_pD3DDevice = NULL;          // Screen Object
@@ -26,6 +24,11 @@ static void InitialiseD3D()
     // Create one backbuffer
     d3dpp.BackBufferCount = 1;
 
+    // Tells DirectX to draw only the closest object if one is front of others;
+    // Basically, don't draw the back side of the sphere! Very handy for performance.
+    d3dpp.EnableAutoDepthStencil = TRUE;
+    d3dpp.AutoDepthStencilFormat = D3DFMT_D24S8;
+
     // Set up how the backbuffer is "presented" to the frontbuffer each time
     d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
 
@@ -34,8 +37,10 @@ static void InitialiseD3D()
         D3DCREATE_HARDWARE_VERTEXPROCESSING,
         &d3dpp, &g_pD3DDevice);
 
-    // Turn off lighting becuase we are specifying that our vertices have textures colour
-    g_pD3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+    
+    g_pD3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);            // Turn off lighting because we have vertex colors
+    g_pD3DDevice->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);        // Turn on z-buffering
+    g_pD3DDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);     //Turn off culling - so we can see the back of the sphere
 }
 
 static void CleanUpD3D()
@@ -44,47 +49,118 @@ static void CleanUpD3D()
     g_pD3D->Release();
 }
 
-static void DisplayText()
+static void DrawSphere()
 {
-    // This function is tremendously wasteful (creates and destroys the font buffer every frame and continuously reloads the font),
-    // but it's simple to understand. In time this can be made into a class, or the XFONT* buffer could be put in the directX init code.
+    // Very inefficient, but goes through all the steps necessary
+    // Creates and deletes vertex and index buffers, and re-generates a sphere every frame too.
+    UINT D3DFVF_CUSTOMVERTEX = (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE);
+    struct CUSTOMVERTEX
+    {
+        FLOAT x, y, z;      // Vertex Position
+        FLOAT nx, ny, nz;   // Direction the vertex is facing (normal)
+        DWORD color;        // Vertex Color
+    };
 
-    //Create some DirectX text buffers
-    XFONT* m_pArial18BitmapFont;    // Pointer to the Arial18Normal Bitmap font
-    LPDIRECT3DSURFACE8 g_pFrontBuffer;
+    //These two variables determine the quality (and poly count) of our sphere.
+    int nRings = 15;
+    int nSegments = 12;
+    DWORD dwNumOfVertices = (nRings + 1) * (nSegments + 1);     // These follow logically from the parameters above
+    DWORD dwNumOfIndices = 2 * nRings * (nSegments + 1);
 
-    //Initialise Fonts
-    g_pD3DDevice->GetBackBuffer(-1, D3DBACKBUFFER_TYPE_MONO, &g_pFrontBuffer);
-    constexpr DWORD dwFontCacheSize = 16 * 1024;
+    // Create our Vertex and Index buffers
+    // An Index buffer is basically a list of our individual meshes
+    // In this example, each poly is treated separately, so they can be exploded later
+    LPDIRECT3DVERTEXBUFFER8 pVertexBuffer = NULL;
+    IDirect3DIndexBuffer8* pIndexBuffer = NULL;
+    g_pD3DDevice->CreateVertexBuffer(dwNumOfVertices * sizeof(CUSTOMVERTEX),
+        0, D3DFVF_CUSTOMVERTEX,
+        D3DPOOL_DEFAULT, &pVertexBuffer);
+    g_pD3DDevice->CreateIndexBuffer(dwNumOfIndices * sizeof(WORD),
+        0, D3DFMT_INDEX16, D3DPOOL_MANAGED,
+        &pIndexBuffer);
 
-    //Load our font in - have to specify its location
-    XFONT_OpenBitmapFont(
-        L"D:\\Arial18Normal.bmf",
-        dwFontCacheSize,
-        &m_pArial18BitmapFont
-    );
+    // Create pointers to our vertex and index buffers
+    // These will be used to fill the buffers one value at a time
+    CUSTOMVERTEX* pVertex = nullptr;
+    WORD* pIndices = nullptr;
+    // And then lock the buffers so they don't get accessed by anything else until we're done
+    pVertexBuffer->Lock(0, 0, (BYTE**)&pVertex, 0);
+    pIndexBuffer->Lock(0, dwNumOfIndices, (BYTE**)&pIndices, 0);
 
-    WCHAR szbuff[200] = { 0 };
-    swprintf(szbuff, L"Hello World");
 
-    //Top left corner of where we want to draw our text
-    constexpr float xpos = 100.0f;
-    constexpr float ypos = 100.0f;
+    WORD wVertexIndex = 0;
+    D3DXVECTOR3 vNormal;
 
-    //Display our text
-    m_pArial18BitmapFont->SetTextColor(D3DCOLOR_XRGB(30, 225, 20));
+    // Set up some angles, where the loops will be "cut" in the sphere
+    float rDeltaRingAngle = (D3DX_PI / nRings);
+    float rDeltaSegAngle = (2.0f * D3DX_PI / nSegments);
 
-    m_pArial18BitmapFont->TextOut(
-        g_pFrontBuffer,
-        szbuff,
-        -1,
-        (long)xpos,
-        (long)ypos
-    );
+    float red = 0.0f, green = 1.0f, blue = 0.0f;
+    // Generate the group of rings for the sphere
+    for (int nCurrentRing = 0; nCurrentRing < nRings + 1; nCurrentRing++)
+    {
+        float r0 = sinf(nCurrentRing * rDeltaRingAngle);
+        float y0 = cosf(nCurrentRing * rDeltaRingAngle);
 
-    //Release our Text Buffers
-    m_pArial18BitmapFont->Release();
-    g_pFrontBuffer->Release();
+        // Generate the group of segments for the current ring
+        for (int nCurrentSegment = 0; nCurrentSegment < nSegments + 1; nCurrentSegment++)
+        {
+            float x0 = r0 * sinf(nCurrentSegment * rDeltaSegAngle);
+            float z0 = r0 * cosf(nCurrentSegment * rDeltaSegAngle);
+
+            vNormal.x = x0;
+            vNormal.y = y0;
+            vNormal.z = z0;
+
+            D3DXVec3Normalize(&vNormal, &vNormal);
+
+            // Add one vector to the strip which makes up the sphere
+            pVertex->x = x0;
+            pVertex->y = y0;
+            pVertex->z = z0;
+            pVertex->nx = vNormal.x;
+            pVertex->ny = vNormal.y;
+            pVertex->nz = vNormal.z;
+
+            // Some colors just to make it more obvious
+            pVertex->color = D3DXCOLOR(red, green, blue, 1.0f);
+            red += 0.02f;
+            blue += 0.01f;
+            green -= 0.015f;
+
+            pVertex++;
+
+            // Add two indices except for the last ring
+            if (nCurrentRing != nRings)
+            {
+                *pIndices = wVertexIndex;
+                pIndices++;
+
+                *pIndices = wVertexIndex + (WORD)(nSegments + 1);
+                pIndices++;
+
+                wVertexIndex++;
+            }
+        }
+    }
+
+    // We're done filling the buffers, so unlock them
+    pIndexBuffer->Unlock();
+    pVertexBuffer->Unlock();
+
+    g_pD3DDevice->SetStreamSource(0, pVertexBuffer, sizeof(CUSTOMVERTEX));
+    g_pD3DDevice->SetVertexShader(D3DFVF_CUSTOMVERTEX);
+    // Select the index buffer
+    g_pD3DDevice->SetIndices(pIndexBuffer, 0);
+
+    DWORD dwNumOfPolygons = dwNumOfIndices - 2;
+    // Render the polygons from the index buffer.
+    // Note: you can change D3DPT_LINESTRIP to D3DPT_TRIANGLESTRIP to see the sphere shaded in.
+    // By using the linestrip, we see the sphere in wireframe mode!
+    g_pD3DDevice->DrawIndexedPrimitive(D3DPT_LINESTRIP, 0, dwNumOfVertices, 0, dwNumOfPolygons);
+
+    pIndexBuffer->Release();
+    pVertexBuffer->Release();
 }
 
 // Application entry point
@@ -93,15 +169,34 @@ void __cdecl main()
     InitialiseD3D();
     while (true)
     {
-        // Clear the backbuffer to blue
-        //                                                          r   g   b
-        g_pD3DDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);
+        // Clear the backbuffer to blue, and clear the Z Buffer
+        //                                                                           r   g   b
+        g_pD3DDevice->Clear(0, NULL, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);
 
         // Begin the scene
         g_pD3DDevice->BeginScene();
 
-        // Draw the text
-        DisplayText();
+        // Camera
+        // DirectX will do a lot of the matrix math for us, but it's still a little scary!
+        D3DXMATRIX view_matrix, matProj;
+
+        D3DXMatrixLookAtLH(&view_matrix,        // Result Matrix
+            &D3DXVECTOR3(0.0f, 0.0f, -5.0f),    // "Eye" (camera) location
+            &D3DXVECTOR3(0.0f, 0.0f, 0.0f),     // "Look At" location
+            &D3DXVECTOR3(0.0f, 1.0f, 0.0f)      // "Up" direction
+        );
+        g_pD3DDevice->SetTransform(D3DTS_VIEW, &view_matrix);
+
+        D3DXMatrixPerspectiveFovLH(&matProj,    // Result Matrix
+            D3DX_PI / 3,                        // Field of View, in radians (60°)
+            (600.0f / 400.0f),                  // Aspect ratio
+            1.0f,                               // Near view plane
+            1000.0f                             // Far view plane
+        );
+        g_pD3DDevice->SetTransform(D3DTS_PROJECTION, &matProj);
+
+        // Finally, draw the sphere
+        DrawSphere();
 
         // End the scene
         g_pD3DDevice->EndScene();
