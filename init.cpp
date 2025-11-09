@@ -2,8 +2,6 @@
 #include <xtl.h>
 #include <D3DX8.h>
 
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_DIFFUSE)
-
 LPDIRECT3D8 g_pD3D = NULL;                      // DirectX Object
 LPDIRECT3DDEVICE8 g_pD3DDevice = NULL;          // Screen Object
 LPDIRECT3DVERTEXBUFFER8 g_pVertexBuffer = NULL; // Vertices Buffer
@@ -11,10 +9,13 @@ LPDIRECT3DTEXTURE8 pTexture = NULL;             // Texture data
 
 struct CUSTOMVERTEX
 {
-    FLOAT x, y, z, rhw; // The transformed position for the vertex.
-    DWORD colour;       // The vertex colour.
-    FLOAT tu, tv;       // UV coordinates
+    FLOAT x, y, z;  // The transformed position for the vertex.
+    FLOAT tu, tv;   // UV coordinates
 };
+
+// The structure Direct3D should expect from our custom verticies
+// XYZ coordinates, then UV coords (_Tex1 means there's one pair of UV's)
+#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_TEX1)
 
 static void DrawTexturedTriangle()
 {
@@ -22,10 +23,10 @@ static void DrawTexturedTriangle()
 
     // Store each point of the triangle together with it's colour and UV coords
     CUSTOMVERTEX cvVertices[] =
-    {//      x       y     z     rhw     color     u     v
-        { 250.0f, 100.0f, 0.5f, 1.0f, 0x00FF0000, 250.0f, 100.0f }, // Red
-        { 400.0f, 350.0f, 0.5f, 1.0f, 0x0000FF00, 400.0f, 350.0f },	// Green
-        { 100.0f, 350.0f, 0.5f, 1.0f, 0x000000FF, 100.0f, 350.0f } // Blue
+    {//     x      y     z     u     v
+        { -1.0f, -1.0f, 0.0f, 0.0f, 1.0f },
+        { -1.0f,  1.0f, 0.0f, 0.0f, 0.0f },
+        {  1.0f,  1.0f, 0.0f, 1.0f, 0.0f }
     };
 
     // Filepath is "D:\\myTexture.bmp"
