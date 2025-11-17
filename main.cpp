@@ -1,5 +1,4 @@
-//Main header file for the XDK
-#include <xtl.h>
+#include "init.h"
 
 // Does what it says on the tin.
 // For homebrew stuff, this may not be instantly obvious that it's working
@@ -64,7 +63,12 @@ static bool Gamepad()
 // Application entry point
 void __cdecl main()
 {
+    // Initialize DirectX and Controllers
+    InitialiseD3D();
     XInitDevices(0, 0);
+
+    // Just clear the screen once, so you can tell when the application has started
+    g_pD3DDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);
 
     // We keep checking the gamepad until the up D-Pad button is pressed
     // When that's true, leave the loop and reboot the Xbox!
@@ -74,5 +78,11 @@ void __cdecl main()
         if (pressedUp) { break; }
     }
 
+    // Draw one more time, so the final screen is different,
+    // then clean up D3D.
+    g_pD3DDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(255, 0, 0), 1.0f, 0);
+    CleanUpD3D();
+
+    // Back to the Dashboard
     Reboot();
 }
