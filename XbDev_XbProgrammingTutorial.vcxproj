@@ -11,7 +11,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="init.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="sound.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="init.h" />
+    <ClInclude Include="sound.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -89,7 +95,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>xboxkrnl.lib;libcmtd.lib;xapilibd.lib;d3d8d.lib;d3dx8d.lib;dsoundd.lib;xkbd.lib;xgraphicsd.lib</AdditionalDependencies>
+      <AdditionalDependencies>xboxkrnl.lib;libcmtd.lib;xapilibd.lib;d3d8d.lib;d3dx8d.lib;xkbd.lib;xgraphicsd.lib;dmusicd.lib;dmusici.lib;dmusicltcg.lib;dsoundd.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <BaseAddress>
       </BaseAddress>
@@ -133,7 +139,7 @@ MKDIR "$(OutDir)XISO"
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>xboxkrnl.lib;libc.lib;libcmt.lib;libcp.lib;xapilib.lib;d3d8.lib;d3dx8.lib;xkbd.lib;xgraphics.lib</AdditionalDependencies>
+      <AdditionalDependencies>xboxkrnl.lib;libc.lib;libcmt.lib;libcp.lib;xapilib.lib;d3d8.lib;d3dx8.lib;xkbd.lib;xgraphics.lib;dmusic.lib;dmusici.lib;dmusicltcg.lib;dsound.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <BaseAddress>
       </BaseAddress>
