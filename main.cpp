@@ -1,93 +1,122 @@
-#include "init.h"
-#include "sound.h"
+//Main header file for the XDK
+#include <xtl.h>
+#include <StdIO.h>
 
-
-CSound g_Madonna;
-
-static void RenderBackground()
+// Simple function to save data, feeding info into a txt file in the xbe's directory
+static void Debug(char* str)
 {
-    g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-    g_pD3DDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    g_pD3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
+    FILE* fp;
+    fp = fopen("D:\\DebugInfo.txt", "a+");
+    fprintf(fp, "%s\n", str);
+    fclose(fp);
+}
 
-    D3DVertexBuffer* g_pVertexBuffer = NULL; // Vertices Buffer
-    IDirect3DTexture8* pTexture = NULL;
+static void Initialize()
+{
+    // Initialize main Functions
+    Debug("Starting up network");
 
-    VOID* pVertices = nullptr;
+    XNetStartupParams xnsp;
+    memset(&xnsp, 0, sizeof(xnsp));
+    xnsp.cfgSizeOfStruct = sizeof(XNetStartupParams);
+    xnsp.cfgFlags = XNET_STARTUP_BYPASS_SECURITY;
+    INT err = XNetStartup(&xnsp);
 
-    struct CUSTOMVERTEX
+    DWORD TIMELIMIT = 6000;
+
+    DWORD dwStart = GetTickCount();
+    Debug("Network started, wait for 6 seconds");
+    while ((GetTickCount() - dwStart) < TIMELIMIT)
     {
-        FLOAT x, y, z; // The transformed position for the vertex.
-        FLOAT tu, tv;  // The vertex texture coordinates
-    };
+        // Wait it out in here, looping endlessly
+        // Could we Sleep in here, or would that interrupt the tick?
+    }
+}
 
-    DWORD D3DFVF_CUSTOMVERTEX = (D3DFVF_XYZ | D3DFVF_TEX1);
+static void Connect()
+{
+    WSADATA WsaData;
+    int iResult = WSAStartup(MAKEWORD(2, 2), &WsaData);
 
-    //Store each point of the triangle together with it's colour
-    CUSTOMVERTEX cvVertices[] =
+    if (iResult != NO_ERROR)
     {
-        { -1.0f, -1.0f, 0.0f,    0.0f, 1.0f }, // x, y, z, textures (tu, tv) 
-        { -1.0f,  1.0f, 0.0f,    0.0f, 0.0f },
-        {  1.0f,  1.0f, 0.0f,    1.0f, 0.0f },
+        Debug("Error at WSAStartup");
+    }
+    
+    char aa[5000];
+    SOCKET m_socket;
+    m_socket = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 
-        { -1.0f, -1.0f, 0.0f,    0.0f, 1.0f },
-        {  1.0f,  1.0f, 0.0f,    1.0f, 0.0f },
-        {  1.0f, -1.0f, 0.0f,    1.0f, 1.0f }
-    };
+    int whathappened = WSAGetLastError();
 
-    //Load our texture in
-    D3DXCreateTextureFromFile(g_pD3DDevice, "D:\\xfactordev.jpg", &pTexture);
+    sprintf(aa, "SOCKET = %ld\n", m_socket);
+    Debug(aa);
+    sprintf(aa, "Whathappened= %ld\n", whathappened);
+    Debug(aa);
+    if (m_socket == INVALID_SOCKET)
+    {
+        Debug("Error at socket()");
+        WSACleanup();
+        return;
+    }
+    
+    sockaddr_in service{};
+    service.sin_family = AF_INET;
+    service.sin_addr.s_addr = inet_addr("172.217.19.164"); // google.com
+    // Can alternatively use Google's DNS (8.8.8.8), yahoo.com (66.218.71.198), Wikimedia (103.102.166.224), or bbc.co.uk (212.58.253.67)
+    // Response will likely be some kind of error, legible or not
+    service.sin_port = htons(80);
 
-    //Create the vertex buffer from our device
-    g_pD3DDevice->CreateVertexBuffer(6 * sizeof(CUSTOMVERTEX),
-        0,
-        D3DFVF_CUSTOMVERTEX,
-        D3DPOOL_DEFAULT,
-        &g_pVertexBuffer);
+    int results = connect(m_socket,(sockaddr*) &service,sizeof(struct sockaddr));
 
-    //Get a pointer to the vertex buffer vertices and lock the vertex buffer
-    g_pVertexBuffer->Lock(0, sizeof(cvVertices), (BYTE**)&pVertices, 0);
+    if (results == SOCKET_ERROR)
+    {
+        Debug("Error at connect()");
+    }
 
-    //Copy our stored vertices values into the vertex buffer
-    memcpy(pVertices, cvVertices, sizeof(cvVertices));
+    send(m_socket, "GET / \r\n", strlen("GET / \r\n"), 0);
 
-    //Unlock the vertex buffer
-    g_pVertexBuffer->Unlock();
+    int rr = 1;
+    while (rr)
+    {
+        rr = recv(m_socket, aa, 500, 0);
+        Debug("recv:");
+        Debug(aa);
+    }
+}
 
-    //Rendering our triangle
-    g_pD3DDevice->SetStreamSource(0, g_pVertexBuffer, sizeof(CUSTOMVERTEX));
-    g_pD3DDevice->SetVertexShader(D3DFVF_CUSTOMVERTEX);
-    g_pD3DDevice->SetTexture(0, pTexture);
-    g_pD3DDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
+static void CleanUp()
+{
+    Debug("exiting");
+    // Shutdown Winsock
+    WSACleanup();
+    XNetCleanup();
+}
 
-    g_pVertexBuffer->Release();
-    pTexture->Release();
+// Does what it says on the tin.
+// For homebrew stuff, this may not be instantly obvious that it's working
+static void Reboot()
+{
+    LD_LAUNCH_DASHBOARD LaunchData = { XLD_LAUNCH_DASHBOARD_MAIN_MENU };
+    XLaunchNewImage(NULL, (LAUNCH_DATA*)&LaunchData);
 }
 
 // Application entry point
 void __cdecl main()
 {
-    InitialiseD3D();
+    // Initialize our Xbox, so we can connect to the network card
+    Initialize();
 
-    g_Madonna.Create("D:\\do_it_with_madonna.wav");
-    g_Madonna.playsound();
+    // Connect to our socket, get the html from google and save to a txt
+    Connect();
 
-    while (true)
-    {
-        //Clear the back buffer to blue
-        g_pD3DDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 255), 1.0f, 0);
+    // Tidy up after ourselves
+    CleanUp();
 
-        // Start, Render image, End
-        g_pD3DDevice->BeginScene();
-        RenderBackground();
-        g_pD3DDevice->EndScene();
-
-        // Flip back buffer to the front
-        g_pD3DDevice->Present(NULL, NULL, NULL, NULL);
-    }
-
-    g_Madonna.Release();
-
-    CleanUpD3D();
+    // Reboot the Xbox when it's all done! This is how you'll know the program is finished
     Reboot();
+
+    // When it's done, look for a txt file next to the xbe on your console.
+    // It may be mostly gibberish (websites don't like being connected directly by an IP address these days)
+    // but it SHOULD be a response, which is all we're testing for!
 }
