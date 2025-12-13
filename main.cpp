@@ -13,7 +13,7 @@ static void Debug(char* str)
 
 static void Initialize()
 {
-    // Initialize main Functions
+    //1: Initialize any Main Functions
     Debug("Starting up network");
 
     XNetStartupParams xnsp;
@@ -28,8 +28,7 @@ static void Initialize()
     Debug("Network started, wait for 6 seconds");
     while ((GetTickCount() - dwStart) < TIMELIMIT)
     {
-        // Wait it out in here, looping endlessly
-        // Could we Sleep in here, or would that interrupt the tick?
+        //Wait it out in here!
     }
 }
 
@@ -63,8 +62,7 @@ static void Connect()
     sockaddr_in service{};
     service.sin_family = AF_INET;
     service.sin_addr.s_addr = inet_addr("172.217.19.164"); // google.com
-    // Can alternatively use Google's DNS (8.8.8.8), yahoo.com (66.218.71.198), Wikimedia (103.102.166.224), or bbc.co.uk (212.58.253.67)
-    // Response will likely be some kind of error, legible or not
+    // Can alternatively use yahoo.com -> 66.218.71.198
     service.sin_port = htons(80);
 
     int results = connect(m_socket,(sockaddr*) &service,sizeof(struct sockaddr));
@@ -113,10 +111,6 @@ void __cdecl main()
     // Tidy up after ourselves
     CleanUp();
 
-    // Reboot the Xbox when it's all done! This is how you'll know the program is finished
+    // Reboot the Xbox when it's all done
     Reboot();
-
-    // When it's done, look for a txt file next to the xbe on your console.
-    // It may be mostly gibberish (websites don't like being connected directly by an IP address these days)
-    // but it SHOULD be a response, which is all we're testing for!
 }
